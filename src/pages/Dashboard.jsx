@@ -1,19 +1,28 @@
 import { useState } from "react"
 import BotBuilder from "./BotBuilder";
+import BotManager from "./BotManager";
 
 function Dashboard(){
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(true)
     const [activeTab, setActiveTab] = useState('dashboard');
 
+    const [selectedBotId, setSelectedBotId] = useState(null);
+
+    
+    const handleConfugureBot = (botId) => {
+        setSelectedBotId(botId);
+        setActiveTab('crear-bot');
+    }
+
     function renderContent(){
         switch (activeTab) {
             case 'dashboard': 
                 return (<div> Mi Dashboard </div>)
             case 'mis-bots':
-                return <div> Mi Chatbots </div>
+                return <BotManager onConfigure={handleConfugureBot}></BotManager>
             case 'crear-bot':
-                return <BotBuilder></BotBuilder>
+                return <BotBuilder botId={selectedBotId}></BotBuilder>
         
             default:
                 break;
