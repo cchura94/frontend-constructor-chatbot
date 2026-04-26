@@ -109,7 +109,7 @@ function BotBuilder({botId}) {
             id: res,
             key: "X",
             text: "Nueva Opción",
-            chabotNodeId: activeNodeId,
+            chatbotNodeId: activeNodeId,
             next_node_id: null,
             respuesta: {
                 type: "text",
@@ -120,6 +120,32 @@ function BotBuilder({botId}) {
         setNodes(nodes.map(n => n.id === activeNodeId?{...n, opciones: [...(n.opciones || []), newOption]}: n));
     }
 
+    const handleSaveChanges = async () => {
+        try {
+             await axios.put(`http://127.0.0.1:3000/api/bots/${botId}`, {prompt: botPrompt} );
+
+             await axios.put(`http://127.0.0.1:3000/api/chatbot/nodes/${activeNode?.id}`, {mensaje: activeNode?.mensaje} );
+
+             const optionPromise = activeNode.opciones.map(opt => {
+                if(opt.id && typeof opt.id === 'number'){
+                    return axios.put(`http://127.0.0.1:3000/api/chatbot/options/${opt.id}`, opt);
+                }else{
+                    const {id, ...newOptData} = opt;
+                    return axios.post(`http://127.0.0.1:3000/api/chatbot/options`, newOptData);
+                }
+             });
+
+             await Promise.all(optionPromise);
+
+             obtenerNodos()
+             alert("Cambios guardados con éxito");
+
+        } catch (error) {
+            alert("Error al guardar lo cambios");
+        }
+
+    }
+
     return <div className="flex flex-col lg:flex-row gap-6 p-4 bg-[#f8fafc] h-screen overflow-hidden">
         <div className="flex-1 overflow-y-auto pr-4 space-y-6 custom-scrollbar">
             <header className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
@@ -127,7 +153,7 @@ function BotBuilder({botId}) {
                     <h2>Configuración del Bot</h2>
                     <p>Nodo Activo: main</p>
                 </div>
-                <button className="px-6 py-3 rounded-xl text-sm shadow-lg flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200">Guardar Cambios</button>
+                <button className="px-6 py-3 rounded-xl text-sm shadow-lg flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200" onClick={handleSaveChanges}>Guardar Cambios</button>
             </header>
             <div className="flex gap-2 overflow-x-auto py-2">
                 {nodes.map(node => (
@@ -152,7 +178,7 @@ function BotBuilder({botId}) {
                 </div>
                 <textarea 
                     className="w-full p-5 bg-slate-50 border-2 border-slate.100 rounded-2xl"
-                value={botPrompt} ></textarea>
+                value={botPrompt} onChange={(e) => setBotPrompt(e.target.value)} ></textarea>
                 <p>Este Prompt para las respuestas de la IA</p>
 
             </div>
@@ -191,28 +217,28 @@ function BotBuilder({botId}) {
                                 {opt.next_node_id?(
                                     <div className="space-y-2">
                                         <label htmlFor="">Nodo destino</label>
-                                        <select name="" id="" className="w-full p-2 bg-white border-slate-200 rounded-lg text-sm">
+                                        <select name="" id="" className="w-full p-2 bg-white border-slate-200 rounded-lg text-sm" value={opt.next_node_id} onChange={(e) => updateLocalOption(opt.id, 'next_node_id', e.target.value)}>
                                             {nodes.map(n => <option key={n.id} value={n.id}>{n.node_key}</option>)}
                                         </select>
                                     </div>
                                 ):(
                                     <div className="space-y-3">
                                         {opt.respuesta?.type === 'text' && (
-                                            <input type="text" className="w-full p-2 bg-white border rounded-lg text-sm" value={opt.respuesta?.body || ""} placeholder="Ingrese Texto"/>
+                                            <input type="text" className="w-full p-2 bg-white border rounded-lg text-sm" value={opt.respuesta?.body || ""} placeholder="Ingrese Texto" onChange={(e) => updateLocalOption(opt.id, 'respuesta', {...opt.respuesta, body: e.target.value})}/>
                                         )}
                                         {(opt.respuesta?.type === 'image' || opt.respuesta?.type === 'document') && (
                                             <div className="space-y-2">
-                                                <input type="text" className="w-full p-2 bg-white border rounded-lg text-sm" value={opt.respuesta?.link} placeholder="Ingrese url" />
-                                                <input type="text" className="w-full p-2 bg-white border rounded-lg text-sm" value={opt.respuesta?.caption} placeholder="Ingrese Caption" />
+                                                <input type="text" className="w-full p-2 bg-white border rounded-lg text-sm" value={opt.respuesta?.link} placeholder="Ingrese url" onChange={(e) => updateLocalOption(opt.id, 'respuesta', {...opt.respuesta, link: e.target.value})} />
+                                                <input type="text" className="w-full p-2 bg-white border rounded-lg text-sm" value={opt.respuesta?.caption} placeholder="Ingrese Caption" onChange={(e) => updateLocalOption(opt.id, 'respuesta', {...opt.respuesta, caption: e.target.value})} />
 
                                             </div>
                                         )}
                                         {(opt.respuesta?.type === 'location') && (
                                             <div className="grid grid-cols-2 gap-2">
-                                                <input type="text" className="w-full p-2 bg-white border rounded-lg text-sm" value={opt.respuesta?.latitude || ""} placeholder="Ingrese Latitud" />
-                                                <input type="text" className="w-full p-2 bg-white border rounded-lg text-sm" value={opt.respuesta?.longitude || ""} placeholder="Ingrese Longitud" />
-                                                <input type="text" className="w-full p-2 bg-white border rounded-lg text-sm" value={opt.respuesta?.name} placeholder="Ingrese Nombre" />
-                                                <input type="text" className="w-full p-2 bg-white border rounded-lg text-sm" value={opt.respuesta?.address} placeholder="Ingrese Dirección" />
+                                                <input type="text" className="w-full p-2 bg-white border rounded-lg text-sm" value={opt.respuesta?.latitude || ""} placeholder="Ingrese Latitud" onChange={(e) => updateLocalOption(opt.id, 'respuesta', {...opt.respuesta, latitude: e.target.value})} />
+                                                <input type="text" className="w-full p-2 bg-white border rounded-lg text-sm" value={opt.respuesta?.longitude || ""} placeholder="Ingrese Longitud" onChange={(e) => updateLocalOption(opt.id, 'respuesta', {...opt.respuesta, longitude: e.target.value})} />
+                                                <input type="text" className="w-full p-2 bg-white border rounded-lg text-sm" value={opt.respuesta?.name} placeholder="Ingrese Nombre" onChange={(e) => updateLocalOption(opt.id, 'respuesta', {...opt.respuesta, name: e.target.value})} />
+                                                <input type="text" className="w-full p-2 bg-white border rounded-lg text-sm" value={opt.respuesta?.address} placeholder="Ingrese Dirección" onChange={(e) => updateLocalOption(opt.id, 'respuesta', {...opt.respuesta, address: e.target.value})} />
 
                                             </div>
                                         )}
